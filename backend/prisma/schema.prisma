@@ -1,0 +1,1526 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  BOOKED
+  RESERVED
+  CLEANING
+  INSPECTION
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  MPESA
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum BookingSource {
+  WEBSITE
+  WALK_IN
+  PHONE
+  WHATSAPP
+  EMAIL
+  TRAVEL_AGENT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  LEAVE
+  OFF_DUTY
+  HOLIDAY
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  MATERNITY
+  PATERNITY
+  COMPASSIONATE
+  STUDY
+  UNPAID
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum EmploymentType {
+  PERMANENT
+  CONTRACT
+  INTERN
+  CASUAL
+}
+
+enum TaskStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TicketStatus {
+  NEW
+  ASSIGNED
+  IN_PROGRESS
+  WAITING_PARTS
+  COMPLETED
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PREPARING
+  READY
+  SERVED
+  COMPLETED
+  CANCELLED
+}
+
+enum EventStatus {
+  PLANNED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  CLEANING
+}
+
+// ===================== AUTHENTICATION =====================
+
+model User {
+  id            Int        @id @default(autoincrement())
+  username      String     @unique
+  email         String     @unique
+  passwordHash  String     @map("password_hash")
+  roleId        Int        @map("role_id")
+  employeeId    Int?       @unique @map("employee_id")
+  status        UserStatus @default(ACTIVE)
+  mustChangePassword Boolean @default(false) @map("must_change_password")
+  lastLogin     DateTime?  @map("last_login")
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+
+  role          Role              @relation(fields: [roleId], references: [id])
+  employee      Employee?         @relation(fields: [employeeId], references: [id])
+  sessions      LoginSession[]
+  passwordResets PasswordReset[]
+  auditLogs     AuditLog[]
+  activities    UserActivity[]
+  reservations  Reservation[]     @relation("ReservationCreatedBy")
+  payments      Payment[]         @relation("PaymentProcessedBy")
+  uploadedFiles UploadedFile[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("users")
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  roleName    String   @unique @map("role_name")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  users     User[]
+  rolePermissions RolePermission[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("roles")
+}
+
+model Permission {
+  id             Int      @id @default(autoincrement())
+  permissionName String   @unique @map("permission_name")
+  module         String?
+  description    String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  rolePermissions RolePermission[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       Int @map("role_id")
+  permissionId Int @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model LoginSession {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     String   @unique
+  ipAddress String?  @map("ip_address")
+  device    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("login_sessions")
+}
+
+model PasswordReset {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("password_resets")
+}
+
+// ===================== GUEST MODULE =====================
+
+model Guest {
+  id            Int      @id @default(autoincrement())
+  guestNumber   String   @unique @map("guest_number")
+  firstName     String   @map("first_name")
+  lastName      String   @map("last_name")
+  gender        Gender?
+  phone         String
+  email         String?
+  nationality   String?
+  idNumber      String?  @map("id_number")
+  passportNumber String? @map("passport_number")
+  dateOfBirth   DateTime? @map("date_of_birth")
+  address       String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  preferences   GuestPreference?
+  documents     GuestDocument[]
+  reviews       GuestReview[]
+  contacts      GuestContact[]
+  activities    GuestActivity[]
+  reservations  Reservation[]
+  payments      Payment[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("guests")
+}
+
+model GuestPreference {
+  id          Int     @id @default(autoincrement())
+  guestId     Int     @unique @map("guest_id")
+  smoking     Boolean @default(false)
+  bedType     String? @map("bed_type")
+  mealPrefs   String? @map("meal_preferences")
+  accessibility String?
+  favoriteRoom String? @map("favorite_room")
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+
+  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("guest_preferences")
+}
+
+model GuestDocument {
+  id        Int      @id @default(autoincrement())
+  guestId   Int      @map("guest_id")
+  type      String
+  fileUrl   String   @map("file_url")
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("guest_documents")
+}
+
+model GuestReview {
+  id         Int      @id @default(autoincrement())
+  guestId    Int      @map("guest_id")
+  rating     Int
+  comment    String?
+  staffResponse String? @map("staff_response")
+  status     String   @default("NEW")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("guest_reviews")
+}
+
+model GuestContact {
+  id           Int    @id @default(autoincrement())
+  guestId      Int    @map("guest_id")
+  contactName  String @map("contact_name")
+  phone        String
+  relationship String?
+
+  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("guest_contacts")
+}
+
+model GuestActivity {
+  id          Int      @id @default(autoincrement())
+  guestId     Int      @map("guest_id")
+  activity    String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("guest_activities")
+}
+
+// ===================== ROOM MODULE =====================
+
+model RoomType {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  capacity    Int
+  price       Float
+  imageUrl    String?  @map("image_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  rooms       Room[]
+  roomAmenities RoomTypeAmenity[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("room_types")
+}
+
+model Room {
+  id         Int        @id @default(autoincrement())
+  roomNumber String     @unique @map("room_number")
+  roomTypeId Int        @map("room_type_id")
+  floor      Int
+  status     RoomStatus @default(AVAILABLE)
+  price      Float
+  description String?
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+
+  roomType          RoomType          @relation(fields: [roomTypeId], references: [id])
+  images            RoomImage[]
+  statusHistory     RoomStatusHistory[]
+  rates             RoomRate[]
+  reservations      Reservation[]
+  housekeepingTasks HousekeepingTask[]
+  maintenanceTickets MaintenanceTicket[]
+  equipment         Equipment[]
+  laundry           Laundry[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("rooms")
+}
+
+model RoomImage {
+  id        Int      @id @default(autoincrement())
+  roomId    Int      @map("room_id")
+  imageUrl  String   @map("image_url")
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("room_images")
+}
+
+model Amenity {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  icon        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  roomAmenities RoomTypeAmenity[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("amenities")
+}
+
+model RoomTypeAmenity {
+  roomTypeId Int @map("room_type_id")
+  amenityId  Int @map("amenity_id")
+
+  roomType RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  amenity  Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([roomTypeId, amenityId])
+  @@map("room_type_amenities")
+}
+
+model RoomStatusHistory {
+  id        Int        @id @default(autoincrement())
+  roomId    Int        @map("room_id")
+  status    RoomStatus
+  changedAt DateTime   @default(now()) @map("changed_at")
+  changedBy Int?       @map("changed_by")
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("room_status_history")
+}
+
+model RoomRate {
+  id        Int      @id @default(autoincrement())
+  roomId    Int      @map("room_id")
+  name      String
+  price     Float
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("room_rates")
+}
+
+// ===================== RESERVATION MODULE =====================
+
+model Reservation {
+  id              Int                @id @default(autoincrement())
+  reservationNumber String            @unique @map("reservation_number")
+  guestId         Int                @map("guest_id")
+  roomId          Int                @map("room_id")
+  status          ReservationStatus  @default(PENDING)
+  source          BookingSource      @default(WEBSITE)
+  checkIn         DateTime           @map("check_in")
+  checkOut        DateTime           @map("check_out")
+  adults          Int                @default(1)
+  children        Int                @default(0)
+  totalAmount     Float?             @map("total_amount")
+  createdById     Int?               @map("created_by_id")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  guest       Guest            @relation(fields: [guestId], references: [id])
+  room        Room             @relation(fields: [roomId], references: [id])
+  createdBy   User?            @relation("ReservationCreatedBy", fields: [createdById], references: [id])
+  payments    Payment[]
+  notes       ReservationNote[]
+  requests    ReservationRequest[]
+  cancellations ReservationCancellation?
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("reservations")
+}
+
+model ReservationNote {
+  id            Int      @id @default(autoincrement())
+  reservationId Int      @map("reservation_id")
+  note          String
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("reservation_notes")
+}
+
+model ReservationRequest {
+  id            Int      @id @default(autoincrement())
+  reservationId Int      @map("reservation_id")
+  request       String
+  fulfilled     Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("reservation_requests")
+}
+
+model ReservationCancellation {
+  id            Int      @id @default(autoincrement())
+  reservationId Int      @unique @map("reservation_id")
+  reason        String
+  refundAmount  Float?   @map("refund_amount")
+  cancelledAt   DateTime @default(now()) @map("cancelled_at")
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("reservation_cancellations")
+}
+
+// ===================== PAYMENT MODULE =====================
+
+model Payment {
+  id                 Int           @id @default(autoincrement())
+  paymentNumber      String        @unique @map("payment_number")
+  reservationId      Int?          @map("reservation_id")
+  guestId            Int?          @map("guest_id")
+  method             PaymentMethod
+  amount             Float
+  currency           String        @default("KES")
+  status             PaymentStatus @default(PENDING)
+  transactionRef     String?       @unique @map("transaction_reference")
+  mpesaReceipt       String?       @map("mpesa_receipt")
+  phoneNumber        String?       @map("phone_number")
+  processedById      Int?          @map("processed_by_id")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  reservation  Reservation? @relation(fields: [reservationId], references: [id])
+  guest        Guest?       @relation(fields: [guestId], references: [id])
+  processedBy  User?        @relation("PaymentProcessedBy", fields: [processedById], references: [id])
+  refunds      Refund[]
+  invoice      Invoice?
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("payments")
+}
+
+model Invoice {
+  id          Int      @id @default(autoincrement())
+  paymentId   Int      @unique @map("payment_id")
+  invoiceNumber String @unique @map("invoice_number")
+  issuedAt    DateTime @default(now()) @map("issued_at")
+
+  payment     Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  items       InvoiceItem[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id        Int     @id @default(autoincrement())
+  invoiceId Int     @map("invoice_id")
+  description String
+  quantity  Int     @default(1)
+  unitPrice Float   @map("unit_price")
+  total     Float
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("invoice_items")
+}
+
+model Refund {
+  id        Int           @id @default(autoincrement())
+  paymentId Int           @map("payment_id")
+  amount    Float
+  reason    String
+  status    PaymentStatus @default(PENDING)
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("refunds")
+}
+
+model Tax {
+  id        Int      @id @default(autoincrement())
+  name      String
+  rate      Float
+  createdAt DateTime @default(now()) @map("created_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("taxes")
+}
+
+// ===================== RESTAURANT MODULE =====================
+
+model RestaurantTable {
+  id       Int         @id @default(autoincrement())
+  tableNumber Int      @unique @map("table_number")
+  capacity Int
+  status   TableStatus @default(AVAILABLE)
+  location String?
+
+  orders RestaurantOrder[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("restaurant_tables")
+}
+
+model RestaurantCategory {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+  menuItems RestaurantMenuItem[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("restaurant_categories")
+}
+
+model RestaurantMenuItem {
+  id           Int      @id @default(autoincrement())
+  name         String
+  description  String?
+  price        Float
+  categoryId   Int      @map("category_id")
+  imageUrl     String?  @map("image_url")
+  preparationTime Int?  @map("preparation_time")
+  ingredients  String?
+  calories     Int?
+  available    Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  category RestaurantCategory @relation(fields: [categoryId], references: [id])
+  orderItems RestaurantOrderItem[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("restaurant_menu_items")
+}
+
+model RestaurantOrder {
+  id          Int         @id @default(autoincrement())
+  orderNumber String      @unique @map("order_number")
+  tableId     Int?        @map("table_id")
+  waiterId    Int?        @map("waiter_id")
+  customerName String?    @map("customer_name")
+  status      OrderStatus @default(PENDING)
+  totalAmount Float?      @map("total_amount")
+  discount    Float?      @default(0)
+  tax         Float?      @default(0)
+  notes       String?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  table      RestaurantTable?     @relation(fields: [tableId], references: [id])
+  items      RestaurantOrderItem[]
+  payments   RestaurantPayment[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("restaurant_orders")
+}
+
+model RestaurantOrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int     @map("order_id")
+  menuItemId Int    @map("menu_item_id")
+  quantity  Int     @default(1)
+  unitPrice Float   @map("unit_price")
+  subtotal  Float
+
+  order    RestaurantOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem RestaurantMenuItem @relation(fields: [menuItemId], references: [id])
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("restaurant_order_items")
+}
+
+model RestaurantPayment {
+  id        Int           @id @default(autoincrement())
+  orderId   Int           @map("order_id")
+  method    PaymentMethod
+  amount    Float
+  status    PaymentStatus @default(PENDING)
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  order RestaurantOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("restaurant_payments")
+}
+
+// ===================== EVENT MODULE =====================
+
+model EventHall {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  capacity    Int
+  price       Float
+  description String?
+  facilities  String?
+  imageUrl    String?  @map("image_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  bookings EventBooking[]
+  packages EventPackage[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("event_halls")
+}
+
+model EventPackage {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  price       Float
+  imageUrl    String?  @map("image_url")
+  hallId      Int?     @map("hall_id")
+  maxGuests   Int?     @map("max_guests")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+  hall      EventHall?           @relation(fields: [hallId], references: [id])
+  items     EventPackageItem[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("event_packages")
+}
+
+model EventPackageItem {
+  id          Int     @id @default(autoincrement())
+  packageId   Int     @map("package_id")
+  itemName    String  @map("item_name")
+  quantity    Int     @default(1)
+  unitPrice   Float   @map("unit_price")
+
+  package EventPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("event_package_items")
+}
+
+model EventBooking {
+  id          Int         @id @default(autoincrement())
+  eventName   String      @map("event_name")
+  hallId      Int         @map("hall_id")
+  packageId   Int?        @map("package_id")
+  eventDate   DateTime    @map("event_date")
+  startTime   DateTime    @map("start_time")
+  endTime     DateTime    @map("end_time")
+  guestCount  Int         @map("guest_count")
+  status      EventStatus @default(PLANNED)
+  contactName String      @map("contact_name")
+  contactPhone String     @map("contact_phone")
+  notes       String?
+  deposit     Float?
+  totalAmount Float?      @map("total_amount")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+
+  hall    EventHall @relation(fields: [hallId], references: [id])
+  payments EventBookingPayment[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("event_bookings")
+}
+
+model EventBookingPayment {
+  id        Int           @id @default(autoincrement())
+  bookingId Int           @map("booking_id")
+  method    PaymentMethod
+  amount    Float
+  status    PaymentStatus @default(PENDING)
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  booking EventBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("event_booking_payments")
+}
+
+// ===================== INVENTORY MODULE =====================
+
+model InventoryCategory {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  description String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  items InventoryItem[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("inventory_categories")
+}
+
+model InventoryUnit {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  abbreviation String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+  items InventoryItem[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("inventory_units")
+}
+
+model InventoryItem {
+  id             Int      @id @default(autoincrement())
+  name           String
+  categoryId     Int      @map("category_id")
+  unitId         Int      @map("unit_id")
+  supplierId     Int?     @map("supplier_id")
+  currentStock   Float    @default(0) @map("current_stock")
+  minimumStock   Float    @default(0) @map("minimum_stock")
+  unitCost       Float    @map("unit_cost")
+  totalValue     Float?   @map("total_value")
+  barcode        String?  @unique
+  expiryDate     DateTime? @map("expiry_date")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  category   InventoryCategory   @relation(fields: [categoryId], references: [id])
+  unit       InventoryUnit       @relation(fields: [unitId], references: [id])
+  supplier   Supplier?           @relation(fields: [supplierId], references: [id])
+  transactions InventoryTransaction[]
+  adjustments InventoryAdjustment[]
+  alerts      InventoryAlert[]
+  purchaseOrderItems PurchaseOrderItem[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("inventory_items")
+}
+
+model InventoryTransaction {
+  id         Int      @id @default(autoincrement())
+  itemId     Int      @map("item_id")
+  type       String
+  quantity   Float
+  reference  String?
+  userId     Int?     @map("user_id")
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  item InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("inventory_transactions")
+}
+
+model InventoryAdjustment {
+  id         Int      @id @default(autoincrement())
+  itemId     Int      @map("item_id")
+  quantity   Float
+  reason     String
+  userId     Int?     @map("user_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  item InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("inventory_adjustments")
+}
+
+model InventoryAlert {
+  id        Int      @id @default(autoincrement())
+  itemId    Int      @map("item_id")
+  type      String
+  message   String
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+  item InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("inventory_alerts")
+}
+
+model Supplier {
+  id           Int      @id @default(autoincrement())
+  companyName  String   @map("company_name")
+  contactPerson String? @map("contact_person")
+  phone        String
+  email        String?
+  address      String?
+  paymentTerms String?  @map("payment_terms")
+  rating       Int?
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  items           InventoryItem[]
+  purchaseOrders  PurchaseOrder[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("suppliers")
+}
+
+model PurchaseOrder {
+  id              Int      @id @default(autoincrement())
+  orderNumber     String   @unique @map("order_number")
+  supplierId      Int      @map("supplier_id")
+  status          String   @default("DRAFT")
+  totalAmount     Float?
+  notes           String?
+  orderedAt       DateTime? @map("ordered_at")
+  deliveredAt     DateTime? @map("delivered_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  items    PurchaseOrderItem[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id         Int      @id @default(autoincrement())
+  orderId    Int      @map("order_id")
+  itemId     Int      @map("item_id")
+  quantity   Float
+  unitPrice  Float    @map("unit_price")
+  totalPrice Float    @map("total_price")
+
+  order    PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item     InventoryItem @relation(fields: [itemId], references: [id])
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("purchase_order_items")
+}
+
+// ===================== HOUSEKEEPING MODULE =====================
+
+model HousekeepingTask {
+  id            Int        @id @default(autoincrement())
+  roomId        Int        @map("room_id")
+  assignedTo    Int?       @map("assigned_to")
+  priority      String     @default("NORMAL")
+  status        TaskStatus @default(PENDING)
+  notes         String?
+  scheduledDate DateTime?  @map("scheduled_date")
+  completedAt   DateTime?  @map("completed_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  room      Room @relation(fields: [roomId], references: [id])
+  assignedEmployee Employee? @relation(fields: [assignedTo], references: [id])
+  checklist HousekeepingChecklist[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("housekeeping_tasks")
+}
+
+model HousekeepingChecklist {
+  id        Int  @id @default(autoincrement())
+  taskId    Int  @map("task_id")
+  itemName  String @map("item_name")
+  completed Boolean @default(false)
+
+  task HousekeepingTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("housekeeping_checklists")
+}
+
+model Laundry {
+  id         Int      @id @default(autoincrement())
+  roomId     Int?     @map("room_id")
+  itemType   String   @map("item_type")
+  quantity   Int
+  status     String   @default("PENDING")
+  pickupDate DateTime? @map("pickup_date")
+  returnDate DateTime? @map("return_date")
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  room Room? @relation(fields: [roomId], references: [id])
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("laundry_items")
+}
+
+// ===================== MAINTENANCE MODULE =====================
+
+model MaintenanceCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+  tickets MaintenanceTicket[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("maintenance_categories")
+}
+
+model MaintenanceTicket {
+  id          Int          @id @default(autoincrement())
+  title       String
+  roomId      Int?         @map("room_id")
+  categoryId  Int?         @map("category_id")
+  priority    String       @default("MEDIUM")
+  status      TicketStatus @default(NEW)
+  description String?
+  assignedTo  Int?         @map("assigned_to")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  room      Room?                 @relation(fields: [roomId], references: [id])
+  category  MaintenanceCategory?  @relation(fields: [categoryId], references: [id])
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("maintenance_tickets")
+}
+
+model Equipment {
+  id           Int      @id @default(autoincrement())
+  name         String
+  serialNumber String?  @unique @map("serial_number")
+  roomId       Int?     @map("room_id")
+  purchaseDate DateTime? @map("purchase_date")
+  warrantyExp  DateTime? @map("warranty_expiry")
+  location     String?
+  condition    String   @default("GOOD")
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  room           Room?              @relation(fields: [roomId], references: [id])
+  serviceHistory EquipmentServiceHistory[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("equipment")
+}
+
+model EquipmentServiceHistory {
+  id          Int      @id @default(autoincrement())
+  equipmentId Int      @map("equipment_id")
+  serviceDate DateTime @map("service_date")
+  description String
+  performedBy String?  @map("performed_by")
+  cost        Float?
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("equipment_service_history")
+}
+
+// ===================== EMPLOYEE MODULE =====================
+
+model Department {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  employees Employee[]
+  positions Position[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("departments")
+}
+
+model Position {
+  id           Int      @id @default(autoincrement())
+  title        String
+  departmentId Int      @map("department_id")
+  description  String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+  department Department @relation(fields: [departmentId], references: [id])
+  employees  Employee[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("positions")
+}
+
+model Employee {
+  id             Int            @id @default(autoincrement())
+  employeeNumber String         @unique @map("employee_number")
+  firstName      String         @map("first_name")
+  lastName       String         @map("last_name")
+  phone          String
+  email          String?        @unique
+  nationalId     String?        @unique @map("national_id")
+  kraPin         String?        @map("kra_pin")
+  nhifNumber     String?        @map("nhif_number")
+  nssfNumber     String?        @map("nssf_number")
+  gender         Gender?
+  dateOfBirth    DateTime?      @map("date_of_birth")
+  departmentId   Int            @map("department_id")
+  positionId     Int            @map("position_id")
+  employmentType EmploymentType @default(PERMANENT) @map("employment_type")
+  basicSalary    Float          @default(0) @map("basic_salary")
+  houseAllowance Float?         @default(0) @map("house_allowance")
+  transportAllowance Float?     @default(0) @map("transport_allowance")
+  emergencyContact String?      @map("emergency_contact")
+  emergencyPhone  String?       @map("emergency_phone")
+  status         String         @default("ACTIVE")
+  hireDate       DateTime       @map("hire_date")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  department   Department       @relation(fields: [departmentId], references: [id])
+  position     Position         @relation(fields: [positionId], references: [id])
+  user         User?
+  attendance   Attendance[]
+  leaveRequests LeaveRequest[]
+  salaryHistory SalaryHistory[]
+  notes        EmployeeNote[]
+  documents    EmployeeDocument[]
+  payroll      Payroll[]
+  housekeepingTasks HousekeepingTask[]
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("employees")
+}
+
+model EmployeeDocument {
+  id         Int      @id @default(autoincrement())
+  employeeId Int      @map("employee_id")
+  type       String
+  fileUrl    String   @map("file_url")
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("employee_documents")
+}
+
+model Attendance {
+  id         Int              @id @default(autoincrement())
+  employeeId Int              @map("employee_id")
+  date       DateTime
+  checkIn    DateTime?        @map("check_in")
+  checkOut   DateTime?        @map("check_out")
+  status     AttendanceStatus @default(PRESENT)
+  notes      String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  deletedAt DateTime? @map("deleted_at")
+  @@map("attendance_records")
+}
+
+model LeaveRequest {
+  id         Int        @id @default(autoincrement())
+  employeeId Int        @map("employee_id")
+  leaveType  LeaveType  @map("leave_type")
+  startDate  DateTime   @map("start_date")
+  endDate    DateTime   @map("end_date")
+  reason     String?
+  status     LeaveStatus @default(PENDING)
+  approvedBy Int?       @map("approved_by")
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("leave_requests")
+}
+
+model SalaryHistory {
+  id         Int      @id @default(autoincrement())
+  employeeId Int      @map("employee_id")
+  amount     Float
+  effectiveDate DateTime @map("effective_date")
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("salary_history")
+}
+
+model EmployeeNote {
+  id         Int      @id @default(autoincrement())
+  employeeId Int      @map("employee_id")
+  note       String
+  createdBy  Int?     @map("created_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("employee_notes")
+}
+
+model Payroll {
+  id             Int      @id @default(autoincrement())
+  employeeId     Int      @map("employee_id")
+  month          Int
+  year           Int
+  basicSalary    Float    @map("basic_salary")
+  houseAllowance Float?   @map("house_allowance")
+  transportAllowance Float? @map("transport_allowance")
+  overtime       Float?   @default(0)
+  bonuses        Float?   @default(0)
+  deductions     Float?   @default(0)
+  tax            Float?   @default(0)
+  netSalary      Float    @map("net_salary")
+  paid           Boolean  @default(false)
+  paidAt         DateTime? @map("paid_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, month, year])
+  deletedAt DateTime? @map("deleted_at")
+  @@map("payroll_records")
+}
+
+// ===================== CMS MODULE =====================
+
+model WebsitePage {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("website_pages")
+}
+
+model HomepageContent {
+  id           Int      @id @default(autoincrement())
+  heroTitle    String?  @map("hero_title")
+  heroSubtitle String?  @map("hero_subtitle")
+  heroImageUrl String?  @map("hero_image_url")
+  aboutText    String?  @map("about_text")
+
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("homepage_content")
+}
+
+model GalleryImage {
+  id          Int      @id @default(autoincrement())
+  imageUrl    String   @map("image_url")
+  altText     String?  @map("alt_text")
+  description String?
+  category    String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("gallery_images")
+}
+
+model Promotion {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  bannerUrl   String?  @map("banner_url")
+  discount    Int?
+  startDate   DateTime @map("start_date")
+  endDate     DateTime @map("end_date")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("promotions")
+}
+
+model Faq {
+  id        Int      @id @default(autoincrement())
+  question  String
+  answer    String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @default(now()) @map("updated_at")
+
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("faqs")
+}
+
+model ContactInformation {
+  id        Int      @id @default(autoincrement())
+  type      String   @unique
+  value     String
+  label     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("contact_information")
+}
+
+model Seo {
+  id            Int      @id @default(autoincrement())
+  pageSlug      String   @unique @map("page_slug")
+  metaTitle     String?  @map("meta_title")
+  metaDescription String? @map("meta_description")
+  keywords      String?
+  ogImageUrl    String?  @map("og_image_url")
+  canonicalUrl  String?  @map("canonical_url")
+
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("seo_entries")
+}
+
+// ===================== SETTINGS MODULE =====================
+
+model HotelSetting {
+  id            Int      @id @default(autoincrement())
+  hotelName     String?  @map("hotel_name")
+  logoUrl       String?  @map("logo_url")
+  address       String?
+  phone         String?
+  email         String?
+  website       String?
+  checkInTime   String?  @map("check_in_time")
+  checkOutTime  String?  @map("check_out_time")
+  taxRate       Float?   @map("tax_rate")
+  currency      String?  @default("KES")
+  timezone      String?  @default("Africa/Nairobi")
+
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("hotel_settings")
+}
+
+model PaymentSetting {
+  id              Int      @id @default(autoincrement())
+  method          String   @unique
+  enabled         Boolean  @default(false)
+  mpesaShortcode  String?  @map("mpesa_shortcode")
+  mpesaConsumerKey String? @map("mpesa_consumer_key")
+  mpesaConsumerSecret String? @map("mpesa_consumer_secret")
+  mpesaPasskey    String?  @map("mpesa_passkey")
+  tillNumber      String?  @map("till_number")
+  paybillNumber   String?  @map("paybill_number")
+
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("payment_settings")
+}
+
+model NotificationSetting {
+  id       Int     @id @default(autoincrement())
+  channel  String  @unique
+  enabled  Boolean @default(true)
+  config   String?
+
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("notification_settings")
+}
+
+model SystemSetting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  type      String   @default("string")
+
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("system_settings")
+}
+
+// ===================== AUDIT MODULE =====================
+
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  userId      Int?     @map("user_id")
+  module      String
+  action      String
+  description String?
+  ipAddress   String?  @map("ip_address")
+  device      String?
+  metadata    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("audit_logs")
+}
+
+model UserActivity {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  activity    String
+  description String?
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("user_activities")
+}
+
+model SecurityEvent {
+  id          Int      @id @default(autoincrement())
+  eventType   String   @map("event_type")
+  description String?
+  ipAddress   String?  @map("ip_address")
+  userId      Int?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("security_events")
+}
+
+model FailedLogin {
+  id        Int      @id @default(autoincrement())
+  email     String
+  ipAddress String?  @map("ip_address")
+  attemptedAt DateTime @default(now()) @map("attempted_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("failed_logins")
+}
+
+model SystemLog {
+  id        Int      @id @default(autoincrement())
+  level     String
+  message   String
+  context   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("system_logs")
+}
+
+model Partner {
+  id         Int      @id @default(autoincrement())
+  name       String
+  logoUrl    String   @map("logo_url")
+  websiteUrl String?  @map("website_url")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("partners")
+}
+
+model HeroSlide {
+  id        Int      @id @default(autoincrement())
+  imageUrl  String   @map("image_url")
+  title     String?
+  subtitle  String?
+  sortOrder Int      @default(0) @map("sort_order")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("hero_slides")
+}
+
+model ContactSubmission {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String?
+  email     String?
+  subject   String?
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("contact_submissions")
+}
+
+// ===================== FILE STORAGE MODULE =====================
+
+model UploadedFile {
+  id             Int      @id @default(autoincrement())
+  originalName   String   @map("original_name")
+  storedName     String   @map("stored_name")
+  mimeType       String   @map("mime_type")
+  size           Int
+  url            String
+  relatedType    String?  @map("related_type")
+  relatedId      Int?     @map("related_id")
+  uploadedById   Int?     @map("uploaded_by_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  uploadedBy User? @relation(fields: [uploadedById], references: [id])
+
+  deletedAt DateTime? @map("deleted_at")
+  @@map("uploaded_files")
+}

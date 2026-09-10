@@ -1,0 +1,356 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-forest-50: #ecfdf5;
+  --color-forest-100: #d1fae5;
+  --color-forest-200: #a7f3d0;
+  --color-forest-300: #6ee7b7;
+  --color-forest-400: #34d399;
+  --color-forest-500: #10b981;
+  --color-forest-600: #059669;
+  --color-forest-700: #047857;
+  --color-forest-800: #065f46;
+  --color-forest-900: #0B3B2E;
+  --color-forest-950: #081712;
+
+  --color-gold-50: #fefce8;
+  --color-gold-100: #fef9c3;
+  --color-gold-200: #fef08a;
+  --color-gold-300: #fde047;
+  --color-gold-400: #facc15;
+  --color-gold-500: #D4AF37;
+  --color-gold-600: #b8941e;
+  --color-gold-700: #a07d15;
+  --color-gold-800: #856f0f;
+  --color-gold-900: #6d5d0a;
+
+  /* Brand identity colors (Yads Hood Hotel spec v2.0) */
+  --color-brand-forest: #0F3D2E;
+  --color-brand-emerald: #154734;
+  --color-brand-gold: #C9A227;
+  --color-brand-soft-gold: #D9B84A;
+  --color-brand-charcoal: #081C14;
+  --color-brand-white: #FFFFFF;
+
+  --color-cream: #F8F5EF;
+  --color-charcoal: #1C1C1C;
+  --color-surface: #10261F;
+  --color-surface-light: #145A46;
+  --color-emerald: #145A46;
+  --color-danger: #D93025;
+  --color-warning: #F4B400;
+  --color-info: #4285F4;
+  --color-success: #2E8B57;
+
+  --font-heading: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --radius-card: 22px;
+  --radius-button: 14px;
+  --radius-input: 14px;
+  --radius-modal: 26px;
+  --radius-image: 24px;
+
+  --shadow-card: 0 8px 20px rgba(0,0,0,0.18);
+  --shadow-card-lg: 0 15px 35px rgba(0,0,0,0.25);
+  --shadow-card-xl: 0 22px 50px rgba(0,0,0,0.35);
+  --shadow-hover: 0 28px 60px rgba(0,0,0,0.45);
+  --shadow-black-hover: 0 28px 60px rgba(0,0,0,0.7);
+}
+
+@layer base {
+  * { @apply border-charcoal/20; }
+  body {
+    @apply bg-theme-bg text-theme-text font-body font-medium antialiased transition-all duration-500;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+}
+
+@utility glass {
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--color-glass-border);
+}
+
+@utility glass-light {
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+@utility shadow-black-hover {
+  box-shadow: 0 28px 60px rgba(0,0,0,0.7);
+}
+
+/* ==================== THEME: FOREST (Default) ==================== */
+.theme-forest {
+  --color-primary: #0B3B2E;
+  --color-primary-light: #0D5241;
+  --color-primary-lighter: #145A46;
+  --color-primary-dark: #081712;
+  --color-primary-darkest: #050F0A;
+  --color-accent: #D4AF37;
+  --color-accent-light: #E6C86F;
+  --color-accent-dark: #A88A2B;
+  --color-bg: #081712;
+  --color-bg-card: #10261F;
+  --color-bg-card-hover: #145A46;
+  --color-surface: #145A46;
+  --color-text: #F8F5EF;
+  --color-text-muted: #A0B8A8;
+  --color-border: #21543F;
+  --color-glass-bg: rgba(15,34,28,0.72);
+  --color-glass-border: rgba(255,255,255,0.08);
+  --shadow-card: 0 8px 20px rgba(0,0,0,0.18);
+  --shadow-card-lg: 0 15px 35px rgba(0,0,0,0.25);
+  --shadow-card-xl: 0 22px 50px rgba(0,0,0,0.35);
+  --shadow-hover: 0 28px 60px rgba(0,0,0,0.45);
+  --shadow-black-hover: 0 28px 60px rgba(0,0,0,0.7);
+}
+
+/* ==================== THEME: LIGHT (Green-Tinted White) ==================== */
+.theme-light {
+  --color-primary: #0B3B2E;
+  --color-primary-light: #0F4B3C;
+  --color-primary-lighter: #15564A;
+  --color-primary-dark: #CDDDD4;
+  --color-primary-darkest: #BCCDC4;
+  --color-accent: #C08E2B;
+  --color-accent-light: #D4AF37;
+  --color-accent-dark: #A17B24;
+  --color-bg: #DEEAE2;
+  --color-bg-card: #E5F0EA;
+  --color-bg-card-hover: #D8E8DE;
+  --color-surface: #CDDDD4;
+  --color-text: #1A1E1C;
+  --color-text-muted: #4A5A4F;
+  --color-border: #A3B8AB;
+  --color-glass-bg: rgba(242,247,244,0.9);
+  --color-glass-border: rgba(21,19,15,0.15);
+  --shadow-card: 0 8px 28px rgba(21,19,15,0.12);
+  --shadow-card-lg: 0 16px 48px rgba(21,19,15,0.18);
+  --shadow-card-xl: 0 24px 65px rgba(21,19,15,0.25);
+  --shadow-hover: 0 32px 80px rgba(21,19,15,0.35);
+  --shadow-black-hover: 0 32px 80px rgba(21,19,15,0.45);
+}
+
+/* Theme-based utility classes */
+@utility bg-theme-bg { background-color: var(--color-bg); }
+@utility text-theme-text { color: var(--color-text); }
+@utility bg-theme-card { background-color: var(--color-bg-card); }
+@utility border-theme { border-color: var(--color-border); }
+@utility text-theme-muted { color: var(--color-text-muted); }
+@utility text-theme-accent { color: var(--color-accent); }
+@utility bg-theme-accent { background-color: var(--color-accent); }
+@utility bg-theme-primary { background-color: var(--color-primary); }
+@utility text-theme-primary { color: var(--color-primary); }
+@utility bg-theme-surface { background-color: var(--color-surface); }
+@utility bg-theme-primary-dark { background-color: var(--color-primary-dark); }
+
+/* Brand identity utility classes */
+@utility text-brand-white { color: var(--color-brand-white); }
+@utility text-brand-gold { color: var(--color-brand-gold); }
+@utility text-brand-soft-gold { color: var(--color-brand-soft-gold); }
+@utility bg-brand-gold { background-color: var(--color-brand-gold); }
+@utility bg-brand-forest { background-color: var(--color-brand-forest); }
+@utility bg-brand-charcoal { background-color: var(--color-brand-charcoal); }
+
+/* ==================== RESPONSIVE HELPERS ==================== */
+
+@layer utilities {
+  .sidebar-overlay {
+    @apply fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 4px;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+}
+
+/* ==================== RESPONSIVE TABLE HELPERS ==================== */
+
+@utility table-col-priority-1 {
+  @apply table-cell;
+}
+@utility table-col-priority-2 {
+  @apply hidden sm:table-cell;
+}
+@utility table-col-priority-3 {
+  @apply hidden md:table-cell;
+}
+@utility table-col-priority-4 {
+  @apply hidden lg:table-cell;
+}
+@utility table-col-priority-5 {
+  @apply hidden xl:table-cell;
+}
+
+@utility table-header {
+  @apply px-4 py-3 text-left text-xs font-semibold text-theme-muted uppercase tracking-wider whitespace-nowrap;
+}
+
+@utility table-cell {
+  @apply px-4 py-3 text-sm whitespace-nowrap;
+}
+
+/* ==================== MODAL RESPONSIVE ==================== */
+
+@utility modal-mobile {
+  @apply max-w-lg w-[95vw] mx-auto;
+}
+
+/* ==================== RESPONSIVE SIDEBAR ==================== */
+
+@utility sidebar-desktop {
+  @apply fixed left-0 top-0 h-full z-40 bg-theme-primary-dark border-r border-theme transition-all duration-300 flex flex-col;
+}
+
+@utility sidebar-mobile {
+  @apply fixed left-0 top-0 h-full z-40 bg-theme-primary-dark border-r border-theme transition-all duration-300 flex flex-col lg:static lg:h-screen;
+}
+
+/* ==================== CARD RESPONSIVE ==================== */
+
+@utility card-responsive {
+  @apply p-4 md:p-6;
+}
+
+/* ==================== PAGE CONTAINER ==================== */
+
+@utility page-container {
+  @apply space-y-4 md:space-y-6;
+}
+
+/* ==================== WELCOME SCREEN AMBIENCE ==================== */
+
+.welcome-stage {
+  --ew: min(58vw, 30vh);
+}
+
+@media (min-height: 700px) {
+  .welcome-stage {
+    --ew: min(58vw, 34vh);
+  }
+}
+
+@media (min-width: 768px) {
+  .welcome-stage {
+    --ew: min(40vw, 40vh);
+  }
+}
+
+@media (min-width: 1280px) {
+  .welcome-stage {
+    --ew: min(32vw, 46vh);
+  }
+}
+
+@media (min-width: 1920px) {
+  .welcome-stage {
+    --ew: min(28vw, 50vh);
+  }
+}
+
+@keyframes halo-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.07); }
+}
+
+@keyframes particle-rise {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  12% { opacity: var(--p-op, 0.6); }
+  85% { opacity: var(--p-op, 0.6); }
+  100% { transform: translateY(-70px) translateX(10px); opacity: 0; }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.7) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.35) rotate(25deg); }
+}
+
+@keyframes ray-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes sheen-sweep {
+  0%, 55% { transform: translateX(-130%) skewX(-18deg); }
+  85%, 100% { transform: translateX(230%) skewX(-18deg); }
+}
+
+@keyframes letter-breathe {
+  0%, 100% { filter: drop-shadow(0 0 10px rgba(232,200,128,0.35)) drop-shadow(0 0 28px rgba(200,136,56,0.25)); }
+  50% { filter: drop-shadow(0 0 18px rgba(240,220,160,0.6)) drop-shadow(0 0 48px rgba(216,168,96,0.45)); }
+}
+
+@keyframes text-glow {
+  0%, 100% { text-shadow: 0 0 12px rgba(216,168,96,0.4), 0 0 30px rgba(216,168,96,0.25); }
+  50% { text-shadow: 0 0 20px rgba(240,220,160,0.75), 0 0 55px rgba(216,168,96,0.5); }
+}
+
+@keyframes letter-dance {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(-0.09em) rotate(-2deg); }
+  60% { transform: translateY(0.04em) rotate(1.2deg); }
+}
+
+.welcome-skip {
+  color: #F7ECD0;
+  border: 1px solid rgba(216,168,96,0.55);
+  background: rgba(15,61,46,0.6);
+  box-shadow: 0 0 14px rgba(216,168,96,0.25);
+}
+
+.welcome-skip:hover {
+  color: #FFFFFF;
+  border-color: rgba(232,200,128,0.9);
+  background: rgba(21,86,74,0.85);
+  box-shadow: 0 0 22px rgba(216,168,96,0.5);
+}
+
+@keyframes fall {
+  0% { transform: translateY(-6vh); opacity: 0; }
+  8% { opacity: var(--p-op, 0.7); }
+  90% { opacity: var(--p-op, 0.7); }
+  100% { transform: translateY(106vh); opacity: 0; }
+}
+
+@keyframes bg-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+@keyframes hero-text-in {
+  0% { opacity: 0; transform: translateY(26px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
